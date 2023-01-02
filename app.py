@@ -64,6 +64,8 @@ def signup():
     If the there already is a user with that username: flash message
     and re-present form.
     """
+    if CURR_USER_KEY in session:
+        del session[CURR_USER_KEY]
 
     form = UserAddForm()
 
@@ -77,7 +79,7 @@ def signup():
             )
             db.session.commit()
 
-        except IntegrityError:
+        except IntegrityError as e:
             flash("Username already taken", 'danger')
             return render_template('users/signup.html', form=form)
 
@@ -114,6 +116,12 @@ def logout():
     """Handle logout of user."""
 
     # IMPLEMENT THIS
+    
+    do_logout()
+# On logout, it should flash a success message and redirect to the login page.
+    flash('Logout successful')
+    return redirect('/login')
+    
 
 
 ##############################################################################
