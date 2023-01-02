@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm,UserEditForm
+from forms import UserAddForm, UserEditForm, LoginForm, MessageForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -66,7 +66,6 @@ def signup():
     """
     if CURR_USER_KEY in session:
         del session[CURR_USER_KEY]
-
     form = UserAddForm()
 
     if form.validate_on_submit():
@@ -115,13 +114,10 @@ def login():
 def logout():
     """Handle logout of user."""
 
-    # IMPLEMENT THIS
-    
     do_logout()
-# On logout, it should flash a success message and redirect to the login page.
-    flash('Logout successful')
-    return redirect('/login')
 
+    flash("You have successfully logged out.", 'success')
+    return redirect("/login")
 
 
 ##############################################################################
@@ -149,7 +145,6 @@ def users_show(user_id):
     """Show user profile."""
 
     user = User.query.get_or_404(user_id)
-
     # snagging messages in order from the database;
     # user.messages won't be in order by default
     messages = (Message
@@ -216,13 +211,12 @@ def stop_following(follow_id):
 
 
 @app.route('/users/profile', methods=["GET", "POST"])
-def profile():
+def edit_profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
     if not g.user:
-        flash('Access unauthorized.','danger')
-        return redirect('/')
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
 
     user = g.user
     form = UserEditForm(obj=user)
@@ -241,8 +235,6 @@ def profile():
         flash("Wrong password, please try again.", 'danger')
 
     return render_template('users/edit.html', form=form, user_id=user.id)
-
-
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -323,8 +315,11 @@ def homepage():
     """
 
     if g.user:
+        following_ids = [f.id for f in g.user.following] + [g.user.id]
+
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(following_ids))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
@@ -333,6 +328,13 @@ def homepage():
 
     else:
         return render_template('home-anon.html')
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    """404 NOT FOUND page."""
+
+    return render_template('404.html'), 404
 
 
 ##############################################################################
